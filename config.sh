@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Thresholds
+CPU_THRESHOLD=80
+RAM_THRESHOLD_MB=500
+DISK_THRESHOLD_PERCENT=90
+
+# Services to monitor
+SERVICES=("nginx" "sshd" "mysql")
+
+# Alerts
+ENABLE_TELEGRAM=true
+TELEGRAM_TOKEN="YOUR BOT TOKEN"
+TELEGRAM_CHAT_ID="YOUR CHAT ID"
