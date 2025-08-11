@@ -4,9 +4,9 @@ check_services() {
  local ouput=""
  for service in "${SERVICES[@]}"; do
   if systemctl is-active --quiet "$service"; then
-   output+="$service ✅\n"
+   output+="  ▶ $service ✅\n"
   else
-   output+="$service ❌\n"
+   output+="  ▶ $service ❌\n"
   fi
  done
  echo "$output"
