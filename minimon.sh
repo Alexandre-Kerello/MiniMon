@@ -7,6 +7,8 @@ source ./modules/ram.sh
 source ./modules/disk.sh
 source ./modules/services.sh
 
+source ./alerts/telegram.sh
+
 alert() {
   local messag="$1"
   echo "⚠️ Warning: $message"
