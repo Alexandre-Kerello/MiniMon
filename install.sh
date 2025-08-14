@@ -1,69 +1,108 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-echo "=== MiniMon installation ==="
+APP_NAME="MiniMon"
+INSTALL_DIR="/opt/minimon"
+BIN_LINK="/usr/local/bin/minimon"
+CONFIG_DIR="/etc/minimon"
+DEFAULT_CONFIG_SRC="./config.example.sh"
+
+# Colors
+c_green="\033[1;32m"
+c_red="\033[1;31m"
+c_yellow="\033[1;33m"
+c_reset="\033[0m"
+
+say()  { echo -e "${c_green}[${APP_NAME}]${c_reset} $*"; }
+warn() { echo -e "${c_yellow}[${APP_NAME}] WARN${c_reset} $*"; }
+err()  { echo -e "${c_red}[${APP_NAME}] ERROR${c_reset} $*" >&2; }
+
+say "$APP_NAME installation..."
 
 # Check required dependencies
-REQUIERED_CMDS=(bash free df systemctl msmtp cron)
+REQUIERED_CMDS=(bash free df top curl msmtp cron)
+MISSING=()
 for cmd in "${REQUIERED_CMDS[@]}"; do
   if ! command -v "$cmd" &>/dev/null; then
-    echo "▶️Missing dependencies: $cmd"
-    MISSING=true
+    warn "issing dependencies: $cmd"
+    MISSING+=("$cmd")
   fi
 done
 
-if [ "$MISSING" = true ]; then
-  echo "Install missing dependencies (sudo apt install ...)"
+if ((${#MISSING[@]})); then
+  err "Install missing dependencies (sudo apt install ${MISSING[*]})"
   exit 1
 fi
 
-# Installation directories
-INSTALL_DIR="/opt/minimon"
-CONFIG_DIR="/etc/minimon"
-
 # Copy file to /opt/minimon
-echo "▶️Creating $INSTALL_DIR directory"
+say "Creating $INSTALL_DIR directory"
 sudo mkdir -p "$INSTALL_DIR"
-sudo cp -r . "$INSTALL_DIR"
+sudo rsync -a --delete --exclude ".git" --exclude ".github" ./ "$INSTALL_DIR/"
+
+# Permissions
+sudo chmod +x "$INSTALL_DIR/minimon.sh" || true
+[ -d "$INSTALL_DIR/alerts" ]  && sudo chmod +x "$INSTALL_DIR/alerts"/*.sh 2>/dev/null || true
+[ -d "$INSTALL_DIR/modules" ] && sudo chmod +x "$INSTALL_DIR/modules"/*.sh 2>/dev/null || true
+[ -f "$INSTALL_DIR/report.sh" ] && sudo chmod +x "$INSTALL_DIR/report.sh" || true
+[ -f "$INSTALL_DIR/lib/common.sh" ] && sudo chmod +x "$INSTALL_DIR/lib/common.sh" || true
+
+# Symbolic link
+say "Creating a symbolic link to /usr/local/bin/minimon"
+sudo ln -sf "$INSTALL_DIR/minimon.sh" "$BIN_LINK"
 
 # Move config.sh file to /etc/minimon
-echo "▶️Installing configuration in $CONFIG_DIR"
-sudo mkdir -p "$CONFIG_DIR"
+say "Installling configuration file in $CONFIG_DIR"
 if [ -f "$INSTALL_DIR/config.sh" ]; then
+  warn "config.sh found in source → moving to $CONFIG_DIR/config.sh"
   sudo mv "$INSTALL_DIR/config.sh" "$CONFIG_DIR/config.sh"
+elif [ -f "$DEFAULT_CONFIG_SRC" ]; then
+  say "Installing a default config file in $CONFIG_DIR/config.sh"
+  sudo cp "$DEFAULT_CONFIG_SRC" "$CONFIG_DIR/config.sh"
 else
-  echo "⚠️ Missing config.sh file, creating a default file"
-  echo '# MiniMon default config' | sudo tee "$CONFIG_DIR/config.sh" > /dev/null
+  say "Creating a a default config file"
+  sudo tee "$CONFIG_DIR/config.sh" >/dev/null <<'CFG'
+# === MiniMon configuration file ===
+# Email alert via SMTP (optional)
+ENABLE_EMAIL=false
+SMTP_SERVER="smtp.example.com"
+SMTP_PORT=587
+SMTP_TLS=true           # true|false
+SMTP_USER=""
+SMTP_PASS=""
+EMAIL_FROM="minimon@localhost"
+EMAIL_TO=""
+
+# Telegram alert (optional)
+ENABLE_TELEGRAM=false
+TELEGRAM_TOKEN=""
+TELEGRAM_CHAT_ID=""
+
+# Alerts threshold (%)
+CPU_ALERT=85            # % CPU used
+RAM_ALERT=90            # % RAM used
+DISK_ALERT=90           # % disk used on DISK_PATH
+DISK_PATH="/"          # mount point to watch
+
+# Services to monitor (systemd)
+SERVICES=("ssh" "cron")
+
+# Miscellaneous
+LOG_FILE="/var/log/minimon.log"   # usefull if using cron
+CFG
 fi
+
 sudo chmod 640 "$CONFIG_DIR/config.sh"
 sudo chown root:root "$CONFIG_DIR/config.sh"
 
-# Permissions
-if [ -f "$INSTALL_DIR/minimon.sh" ]; then
-  sudo chmod +x "$INSTALL_DIR/minimon.sh"
-fi
-
-if [ -d "$INSTALL_DIR/alerts" ]; then
-  sudo chmod +x "$INSTALL_DIR/alerts/"*.sh 2>/dev/null || true
-fi
-
-if [ -d "$INSTALL_DIR/modules" ]; then
-  sudo chmod +x "$INSTALL_DIR/modules/"*.sh 2>/dev/null || true
-fi
-
-# Symbolic link
-echo "▶️Creatiing a symbolic link to /usr/local/bin/minimon"
-sudo ln -sf "$INSTALL_DIR/minimon.sh" /usr/local/bin/minimon
-
 # Optional cron job
-read -p "Would you like to enable automatic execution (cron @hourly)? [y/N]" install_cron
+read -rp "Would you like to enable automatic execution (cron @hourly)? [y/N]" install_cron
 if [[ "$install_cron" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-  (crontab -l 2>/dev/null; echo "@hourly /usr/bin/local/minimon >> ~/minimon.log 2>&1") | crontab -
-  echo "▶️Cron job added: MiniMon executed every hour"
+  (crontab -l 2>/dev/null; echo "@hourly $BIN_LINK --report txt >> \$HOME/minimon.log 2>&1") | crontab -
+  say "Cron job added: MiniMon executed every hour"
 else
-  echo "▶️Cron job nott installed (You can add it manually via crontab -e)"
+  say "Cron job not installed (You can add it manually via crontab -e)"
 fi
 
-echo "✅ MiniMon successfully installed !"
-echo "You can use MiniMon tool using command: minimon"
-echo "Configuration: $CONFIG_DIR/config.sh"
+say "$APP_NAME successfully installed !"
+say "You can use MiniMon tool using command: minimon"
+say "Configuration: $CONFIG_DIR/config.sh"
