@@ -23,7 +23,7 @@ alert() {
   fi
 }
 
-echo "⚙️ MiniMon - System supervision 📈"
+echo "⚙️ MiniMonn v0.1 - System supervision 📈"
 echo "----------------------------------"
 
 CPU_USAGE=$(check_cpu)
