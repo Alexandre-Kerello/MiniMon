@@ -8,6 +8,7 @@ source ./modules/disk.sh
 source ./modules/services.sh
 
 source ./alerts/telegram.sh
+source ./alerts/email.sh
 
 alert() {
   local messag="$1"
@@ -15,6 +16,10 @@ alert() {
 
   if [ "$ENABLE_TELEGRAM" = true ]; then
     ./alerts/telegram.sh "$message"
+  fi
+
+  if [ "$ENABLE_EMAIL" = true ]; then
+    ./alerts/email.sh "$message"
   fi
 }
 
