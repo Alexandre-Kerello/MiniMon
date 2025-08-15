@@ -14,6 +14,11 @@ error() { echo -e "${c_red}[${APP_NAME}] ERROR${c_reset} $*" >&2; }
 load_config() {
   if [ -f "$CONFIG_DIR/config.sh" ]; then
     source "$CONFIG_DIR/config.sh"
+  elif [ -f "$CONFIG_DIR/config.sh" ] && [ ! -r "$CONFIG_DIR/config.sh" ]; then
+    error "Unable to read config file: $CONFIG_DIR/config.sh"
+    warn "Make sure your user is in the 'minimon' group"
+    warn "Command: sudo usermod -aG minimon $USER"
+    exit 1
   else
     error "No configuration file found (searched: $CONFIG_FILE/config.sh"
     exit 1
