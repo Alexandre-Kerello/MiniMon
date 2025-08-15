@@ -1,45 +1,81 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source ./config.sh
+VERSION="0.1.0"
+SELF_DIR="$(dirname "$(readlink -f "$0")")"
 
-source ./modules/cpu.sh
-source ./modules/ram.sh
-source ./modules/disk.sh
-source ./modules/services.sh
+LIB_COMMON="/opt/minimon/lib/common.sh"
+[ -f "$LIB_COMMON" ] || LIB_COMMON="$SELF_DIR/lib/common.sh"
 
-source ./alerts/telegram.sh
-source ./alerts/email.sh
+source "$LIB_COMMON"
+load_config
 
-alert() {
-  local messag="$1"
-  echo "⚠️ Warning: $message"
+CPU_MOD="/opt/minimon/modules/cpu.sh"; [ -f "$CPU_MOD" ] || CPU_MOD="$SELF_DIR/modules/cpu.sh"
+RAM_MOD="/opt/minimon/modules/ram.sh"; [ -f "$RAM_MOD" ] || RAM_MOD="$SELF_DIR/modules/ram.sh"
+DISK_MOD="/opt/minimon/modules/disk.sh"; [ -f "$DISK_MOD" ] || DISK_MOD="$SELF_DIR/modules/disk.sh"
+SERV_MOD="/opt/minimon/modules/services.sh"; [ -f "$SERV_MOD" ] || SERV_MOD="$SELF_DIR/modules/services.sh"
 
-  if [ "$ENABLE_TELEGRAM" = true ]; then
-    ./alerts/telegram.sh "$message"
-  fi
+source "$CPU_MOD"
+source "$RAM_MOD"
+source "$DISK_MOD"
+source "$SERV_MOD"
 
-  if [ "$ENABLE_EMAIL" = true ]; then
-    ./alerts/email.sh "$message"
-  fi
+usage() {
+  cat <<USG
+${APP_NAME} v${VERSION}
+Usage: minimon [options]
+  --report [txt|html|json]  	Generates a report to stdout
+  --no-alerts			Disables sending alerts
+  --quiet			Compact output
+  -h, --help			Help
+USG
 }
 
-echo "⚙️ MiniMonn v0.1 - System supervision 📈"
-echo "----------------------------------"
+REPORT_FMT=""
+NO_ALERTS=false
+QUIET=false
 
-CPU_USAGE=$(check_cpu)
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --report) REPORT_FMT="${2:-txt}"; shift 2;;
+    --no-alerts) NO_ALERTS=true; shift;;
+    --quiet) QUIET=true; shift;;
+    -h|--help) usage; exit 0;;
+    *) warn "Unknown option: $1"; usage; exit 1;;
+  esac
+done
+
+CPU_USAGE=$(cpu_used_pct)
 RAM_AVAILABLE=$(check_ram)
 DISK_USAGE=$(check_disk)
 SERVICES_STATUSES=$(check_services)
 
-echo "CPU: $CPU_USAGE%"
-[ "$CPU_USAGE" -gt "$CPU_THRESHOLD" ] && alert "High CPU: $CPU_USAGE%"
+# Terminal view
+if ! $QUIET; then
+  echo "📡 ${APP_NAME} – System status"
+  echo "CPU  : ${CPU_USAGE}% | threshold ${CPU_ALERT}%"
+  echo "RAM  : ${RAM_AVAILABLE}% | threshold ${RAM_ALERT}%"
+  echo "DISK : ${DISK_USAGE}% (${DISK_PATH:-/}) | threshold ${DISK_ALERT}%"
+  echo "SERV : ${SERVICES_STATUSES}"
+fi
 
-echo "RAM available: $RAM_AVAILABLE MB"
-[ "$RAM_AVAILABLE" -lt "$RAM_THRESHOLD_MB" ] && alert "Low RAM: $RAM_AVAILABLE MB"
+# Alerts
+if ! $NO_ALERTS; then
+  ([ "$CPU" -ge "${CPU_ALERT}" ] && send_alert "High CPU: ${CPU}%") || true
+  ([ "$RAM" -ge "${RAM_ALERT}" ] && send_alert "High RAM: ${RAM}%") || true
+  ([ "$DISK" -ge "${DISK_ALERT}" ] && send_alert "Disk (${DISK_PATH:-/}) at ${DISK}%") || true
+  # Down services alerts
+  if [[ -n "${SERV}" ]]; then
+    if echo "$SERV" | grep -q "DOWN"; then
+      send_alert "Service(s) down: $(echo "$SERV" | sed 's/\s\+/ /g')"
+    fi
+  fi
+fi
 
-echo "DISK: $DISK_USAGE%"
-[ "$DISK_USAGE" -gt "$DISK_THRESHOLD_PERCENT" ] && alert "Full disk: $DISK_USAGE%"
+# Report
+if [[ -n "$REPORT_FMT" ]]; then
+  REP_BIN="/opt/minimon/report.sh"; [ -f "$REP_BIN" ] || REP_BIN="$SELF_DIR/report.sh"
+  "$REP_BIN" "$REPORT_FMT"
+fi
 
-echo -e "Services :\n$SERVICES_STATUSES"
+exit 0
 
-echo -e "\033[1A----------------------------------"
