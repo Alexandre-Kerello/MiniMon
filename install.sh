@@ -20,7 +20,7 @@ err()  { echo -e "${c_red}[${APP_NAME}] ERROR${c_reset} $*" >&2; }
 say "$APP_NAME installation..."
 
 # Check required dependencies
-REQUIERED_CMDS=(bash free df top curl msmtp cron)
+REQUIERED_CMDS=(bash free df top curl msmtp cron sysstat)
 MISSING=()
 for cmd in "${REQUIERED_CMDS[@]}"; do
   if ! command -v "$cmd" &>/dev/null; then
@@ -39,7 +39,7 @@ say "Creating $INSTALL_DIR directory"
 sudo mkdir -p "$INSTALL_DIR"
 sudo rsync -a --delete --exclude ".git" --exclude ".github" ./ "$INSTALL_DIR/"
 
-# Permissions
+# Scripts permissions
 sudo chmod +x "$INSTALL_DIR/minimon.sh" || true
 [ -d "$INSTALL_DIR/alerts" ]  && sudo chmod +x "$INSTALL_DIR/alerts"/*.sh 2>/dev/null || true
 [ -d "$INSTALL_DIR/modules" ] && sudo chmod +x "$INSTALL_DIR/modules"/*.sh 2>/dev/null || true
@@ -52,10 +52,8 @@ sudo ln -sf "$INSTALL_DIR/minimon.sh" "$BIN_LINK"
 
 # Move config.sh file to /etc/minimon
 say "Installling configuration file in $CONFIG_DIR"
-if [ -f "$INSTALL_DIR/config.sh" ]; then
-  warn "config.sh found in source → moving to $CONFIG_DIR/config.sh"
-  sudo mv "$INSTALL_DIR/config.sh" "$CONFIG_DIR/config.sh"
-elif [ -f "$DEFAULT_CONFIG_SRC" ]; then
+sudo mkdir -p "$CONFIG_DIR"
+if [ -f "$DEFAULT_CONFIG_SRC" ]; then
   say "Installing a default config file in $CONFIG_DIR/config.sh"
   sudo cp "$DEFAULT_CONFIG_SRC" "$CONFIG_DIR/config.sh"
 else
@@ -91,8 +89,19 @@ LOG_FILE="/var/log/minimon.log"   # usefull if using cron
 CFG
 fi
 
+# Create minimon user group
+if ! getent group minimon >/dev/null; then
+  say "Creating minimon user group"
+  sudo groupadd minimon
+fi
+
+# Attribute permissions
+sudo chgrp minimon "$CONFIG_DIR/config.sh"
 sudo chmod 640 "$CONFIG_DIR/config.sh"
-sudo chown root:root "$CONFIG_DIR/config.sh"
+
+# Add current user to minimon group
+say "Adding user $USER to minimon group"
+sudo usermod -aG minimon "$USER"
 
 # Optional cron job
 read -rp "Would you like to enable automatic execution (cron @hourly)? [y/N]" install_cron
@@ -104,5 +113,6 @@ else
 fi
 
 say "$APP_NAME successfully installed !"
+say "Log out / log back in to activate the minimon group rights"
 say "You can use MiniMon tool using command: minimon"
-say "Configuration: $CONFIG_DIR/config.sh"
+say "Minimon configuration: $CONFIG_DIR/config.sh"
