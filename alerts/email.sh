@@ -1,13 +1,28 @@
-#!/bin/bash
-source "$(dirname "$0")/../config.sh"
+#!/usr/bin/env bash
+set -euo pipefail
 
-subject="⚠️ MiniMon Alert"
-body="$1"
+source "/opt/minimon/lib/common.sh"
+load_config
 
-cat <<EOF | msmtp --host="$SMTP_SERVER" --port="$SMTP_PORT" \
-  --auth=on --user="$SMTP_USER" --passwordeval="echo $SMTP_PASS" \
-  --tls=on "$EMAIL_TO"
-Subject: $subject
+SUBJECT="⚠️ MiniMon Alert"
+BODY="$1"
 
-$body
-EOF
+TLS_FLAG="--tls=off"
+if bool "${SMTP_TLS:-true}"; then
+  TLS_FLAG="--tls=on"
+fi
+
+{
+  echo "From: ${EMAIL_FROM:-minimon@localhost}"
+  echo "To: ${EMAIL_TO}"
+  echo "Subject: ${SUBJECT}"
+  echo
+  echi "$BODY"
+} | msmtp \
+  --host="${SMTP_SERVER}" \
+  --port="${SMTP_PORT}" \
+  --auth=on \
+  --user="${SMTP_USER}" \
+  --passwordeval="echo ${SMTP_PASS}" \
+  ${TLS_FLAG} \
+  "${EMAIL_TO"
