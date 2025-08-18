@@ -20,11 +20,11 @@ err()  { echo -e "${c_red}[${APP_NAME}] ERROR${c_reset} $*" >&2; }
 say "$APP_NAME installation..."
 
 # Check required dependencies
-REQUIERED_CMDS=(bash free df top curl msmtp cron sysstat)
+REQUIERED_CMDS=(bash free df top curl msmtp cron)
 MISSING=()
 for cmd in "${REQUIERED_CMDS[@]}"; do
   if ! command -v "$cmd" &>/dev/null; then
-    warn "issing dependencies: $cmd"
+    warn "Missing dependencies: $cmd"
     MISSING+=("$cmd")
   fi
 done
@@ -104,7 +104,7 @@ say "Adding user $USER to minimon group"
 sudo usermod -aG minimon "$USER"
 
 # Optional cron job
-read -rp "Would you like to enable automatic execution (cron @hourly)? [y/N]" install_cron
+read -rp "Would you like to enable automatic execution (cron @hourly)? [y/N] " install_cron
 if [[ "$install_cron" =~ ^([yY][eE][sS]|[yY])$ ]]; then
   (crontab -l 2>/dev/null; echo "@hourly $BIN_LINK --report txt >> \$HOME/minimon.log 2>&1") | crontab -
   say "Cron job added: MiniMon executed every hour"
