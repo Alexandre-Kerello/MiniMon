@@ -13,7 +13,7 @@ FILENAME="minimon_report_$(date +%F_%H-%M-%S)"
 CPU=$(check_cpu)
 RAM=$(check_ram)
 DISK=$(check_disk)
-SERV=$(services_status)
+SERV=$(check_services)
 
 escape_json() {
   echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
