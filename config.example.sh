@@ -25,3 +25,4 @@ SERVICES=("ssh" "cron")
 
 # Miscellaneous
 LOG_FILE="/var/log/minimon.log"   # usefull if using cron
+REPORT_DIR="/home/$USER"
