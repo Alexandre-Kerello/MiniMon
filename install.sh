@@ -86,7 +86,7 @@ SERVICES=("ssh" "cron")
 
 # Miscellaneous
 LOG_FILE="/var/log/minimon.log"   # usefull if using cron
-REPORT_DIR="/home/$USER"
+REPORT_DIR="/home/$USER"          # don't forget to create the directory
 CFG
 fi
 
