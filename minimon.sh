@@ -30,7 +30,7 @@ Usage: minimon [options]
 USG
 }
 
-REPORT_FMT=""
+REPORT_FMT="txt"
 NO_ALERTS=false
 QUIET=false
 
@@ -44,18 +44,18 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-CPU_USAGE=$(cpu_used_pct)
-RAM_AVAILABLE=$(check_ram)
-DISK_USAGE=$(check_disk)
-SERVICES_STATUSES=$(check_services)
+CPU=$(check_cpu)
+RAM=$(check_ram)
+DISK=$(check_disk)
+SERV=$(check_services)
 
 # Terminal view
 if ! $QUIET; then
-  echo "📡 ${APP_NAME} – System status"
-  echo "CPU  : ${CPU_USAGE}% | threshold ${CPU_ALERT}%"
-  echo "RAM  : ${RAM_AVAILABLE}% | threshold ${RAM_ALERT}%"
-  echo "DISK : ${DISK_USAGE}% (${DISK_PATH:-/}) | threshold ${DISK_ALERT}%"
-  echo "SERV : ${SERVICES_STATUSES}"
+  echo "📡 ${APP_NAME} - System status"
+  echo "CPU  : ${CPU}% | Threshold ${CPU_ALERT}%"
+  echo "RAM  : ${RAM}% | Threshold ${RAM_ALERT}%"
+  echo "DISK : ${DISK}% (${DISK_PATH:-/}) | Threshold ${DISK_ALERT}%"
+  echo "SERV : ${SERV}"
 fi
 
 # Alerts
@@ -78,4 +78,3 @@ if [[ -n "$REPORT_FMT" ]]; then
 fi
 
 exit 0
-
