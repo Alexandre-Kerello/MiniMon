@@ -8,7 +8,7 @@ done
 load_config
 
 FORMAT="${1:-txt}" # txt|html|json
-FILENAME="minimon_report_$(date +%F_%H-%M-%S)"
+FILENAME="$REPORT_DIR/minimon_report_$(date +%F_%H-%M-%S)"
 
 CPU=$(check_cpu)
 RAM=$(check_ram)
