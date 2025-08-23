@@ -5,6 +5,7 @@ APP_NAME="MiniMon"
 INSTALL_DIR="/opt/minimon"
 BIN_LINK="/usr/local/bin/minimon"
 CONFIG_DIR="/etc/minimon"
+LOG_FILE="/var/log/minimon.log"
 DEFAULT_CONFIG_SRC="./config.example.sh"
 
 # Colors
@@ -107,7 +108,7 @@ sudo usermod -aG minimon "$USER"
 # Optional cron job
 read -rp "Would you like to enable automatic execution (cron @hourly)? [y/N] " install_cron
 if [[ "$install_cron" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-  (crontab -l 2>/dev/null; echo "@hourly $BIN_LINK --report txt >> \$HOME/minimon.log 2>&1") | crontab -
+  (crontab -l 2>/dev/null; echo "@hourly $BIN_LINK --report txt >> $LOG_FILE 2>&1") | crontab -
   say "Cron job added: MiniMon executed every hour"
 else
   say "Cron job not installed (You can add it manually via crontab -e)"
