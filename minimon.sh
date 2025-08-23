@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="0.1.0"
+VERSION="0.1"
 SELF_DIR="$(dirname "$(readlink -f "$0")")"
 
 LIB_COMMON="/opt/minimon/lib/common.sh"
@@ -44,18 +44,43 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+ALERT_COUNT=0
+
+CPU_ICON=""
 CPU=$(check_cpu)
+if [ "$CPU" -gt "$CPU_ALERT" ]; then
+  ((ALERT_COUNT++))
+  CPU_ICON="⚠️"
+fi
+
+RAM_ICON=""
 RAM=$(check_ram)
+if [ "$RAM" -gt "$RAM_ALERT" ]; then
+  ((ALERT_COUNT++))
+  RAM_ICON="⚠️"
+fi
+
+DISK_ICON=""
 DISK=$(check_disk)
+if [ "$DISK" -gt "$DISK_ALERT" ]; then
+  ((ALERT_COUNT++))
+  DISK_ICON="⚠️"
+fi
+
 SERV=$(check_services)
 
 # Terminal view
 if ! $QUIET; then
-  echo "📡 ${APP_NAME} - System status"
-  echo "CPU  : ${CPU}% | Threshold ${CPU_ALERT}%"
-  echo "RAM  : ${RAM}% | Threshold ${RAM_ALERT}%"
-  echo "DISK : ${DISK}% (${DISK_PATH:-/}) | Threshold ${DISK_ALERT}%"
-  echo "SERV : ${SERV}"
+  echo "⚡ ${APP_NAME} - System status"
+  echo "CPU usage  : ${CPU}% $CPU_ICON"
+  echo "RAM usage  : ${RAM}% $RAM_ICON"
+  echo "Disk usage : ${DISK}% (${DISK_PATH:-/}) $DISK_ICON"
+  echo "Services   : ${SERV}"
+  if [ "$ALERT_COUNT" -gt 0 ]; then
+    echo "Alerts     : ${ALERT_COUNT} threshold(s) exceeded ⚠️"
+  else
+    echo "Alerts     : ${ALERT_COUNT} threshold exceeded"
+  fi
 fi
 
 # Alerts
@@ -72,6 +97,7 @@ if ! $NO_ALERTS; then
 fi
 
 # Report
+([ ! -d "$REPORT_DIR" ] && mkdir -p "$REPORT_DIR") || true
 if [[ -n "$REPORT_FMT" ]]; then
   REP_BIN="/opt/minimon/report.sh"; [ -f "$REP_BIN" ] || REP_BIN="$SELF_DIR/report.sh"
   "$REP_BIN" "$REPORT_FMT"
