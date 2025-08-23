@@ -18,11 +18,10 @@ TELEGRAM_CHAT_ID=""
 CPU_ALERT=85            # % CPU used
 RAM_ALERT=90            # % RAM used
 DISK_ALERT=90           # % disk used on DISK_PATH
-DISK_PATH="/"          # mount point to watch
+DISK_PATH="/"           # mount point to watch
 
 # Services to monitor (systemd)
 SERVICES=("ssh" "cron")
 
 # Miscellaneous
-LOG_FILE="/var/log/minimon.log"   # usefull if using cron
-REPORT_DIR="/home/$USER"          # don't forget to create the directory
+REPORT_DIR="/home/$USER/minimon_report"
